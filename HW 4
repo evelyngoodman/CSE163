@@ -1,0 +1,52 @@
+import os
+from document import Document
+from cse163_utils import normalize_token
+import math
+
+class SearchEngine:
+    def __init__(self, path):
+        """
+        initializer
+        """
+        self._path = path
+        self._index = {}
+        self._count = 0
+        for file_name in os.listdir(self._path):
+            self._count += 1.0
+            document = Document(os.path.join(path, file_name))
+            words = document.get_words()
+            for word in words:
+                word = normalize_token(word)
+                if word in self._index:
+                    self._index[word].append(file_name)
+                else:
+                    self._index[word] = [file_name]
+
+    def _calculate_idf(self, term):
+        """
+        returns the inverse document frequency of that term
+        """
+        if term not in self._index:
+            return 0
+        term = normalize_token(term)
+        doc_list = self._index[term]
+        num_docs = len(doc_list)
+        return math.log(self._count / num_docs)
+
+    def search(self, query):
+        """
+        returns a list of document paths sorted in descending order
+        by tf–idf statistic
+        """
+        desc = []
+        queries = query.split()
+        for word in queries:
+            word = normalize_token(word)
+            term_list = self._index[word]
+            for item in term_list:
+                doc = Document(item)
+                idf = self._calculate_idf(word)
+                tf = doc.term_frequency(word)
+                tfidf = idf * tf
+                desc.append((doc, tfidf))
+        return sorted(desc, key=lambda d: d[1])
